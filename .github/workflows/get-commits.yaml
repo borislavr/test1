@@ -1,0 +1,37 @@
+name: Get Commit Messages and URLs
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  get-commits:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Get commit messages and URLs
+      id: get-commits
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const prNumber = context.payload.pull_request.number;
+          const commits = await github.rest.pulls.listCommits({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: prNumber
+          });
+
+          const commitMessagesAndUrls = commits.data.map(commit => ({
+            message: commit.commit.message,
+            url: commit.html_url
+          }));
+
+          core.setOutput("result", JSON.stringify(commitMessagesAndUrls));
+
+    - name: Output commit messages and URLs
+      run: |
+        echo "Commit messages and URLs:"
+        echo "${{ steps.get-commits.outputs.result }}"
