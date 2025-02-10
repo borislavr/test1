@@ -17,10 +17,14 @@ jobs:
       - name: Get commits
         id: get-commits
         run: |
-          curl  -sL \
+          COMMITS=$(curl  -sL \
           -H "Accept: application/vnd.github+json" \
           -H "Authorization: Bearer ${{ github.token }}" \
           -H "X-GitHub-Api-Version: 2022-11-28" \
           "${{ github.event.pull_request.commits_url }}" \
-          jq -r '.[] | .commit.message'
+          | jq -r '.[] | "[\(.sha)](\(.html_url)) \(.commit.message)"')
+          echo "commits_messages=${COMMITS}" >> GITHUB_ENV
+      - name: Print
+        run: |
+          echo "${{ env.commits_messages }}"
         
