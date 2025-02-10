@@ -24,7 +24,7 @@ jobs:
           "${{ github.event.pull_request.commits_url }}" \
           | jq -r '.[] | "[\(.sha)](\(.html_url)) \(.commit.message)"')
           echo "" > ./_commit_messages.txt
-          echo "### Automatically added description ###" >> ./_commit_messages.txt
+          echo "### Automatically added description" >> ./_commit_messages.txt
           echo "${COMMITS}" >> ./_commit_messages.txt
           
       - name: Update PR Description
@@ -32,5 +32,6 @@ jobs:
         with:
           content: ./_commit_messages.txt
           contentIsFilePath: true
-          regex: "### Automatically added description ###\n.*"
+          regex: "### Automatically added description\n.*"
+          regexFlags: ims
           token: ${{ github.token }}        
