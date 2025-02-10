@@ -24,7 +24,7 @@ jobs:
           "${{ github.event.pull_request.commits_url }}" \
           | jq -r '.[] | "[\(.sha)](\(.html_url)) \(.commit.message)"')
           echo "${COMMITS}"
-          echo "commit_messages=### Automatically added commit messages ###\n${COMMITS}" >> $GITHUB_OUTPUT
+          echo "commit_messages=${COMMITS}" >> $GITHUB_OUTPUT
       - name: Print
         run: |
           echo "${{ steps.get-commits.outputs.commits_messages }}"
