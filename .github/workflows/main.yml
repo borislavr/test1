@@ -4,7 +4,7 @@ name: Collect Commit Messages
 
 on: pull_request
 permissions:
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   get-commit-messages:
@@ -26,7 +26,10 @@ jobs:
           echo "### Automatically added description ###" > ./_commit_messages.txt
           echo "${COMMITS}" >> ./_commit_messages.txt
           
-      - name: Print
-        run: |
-          cat ./_commit_messages.txt
-        
+      - name: Update PR Description
+        uses: nefrob/pr-description@v1.2.0
+        with:
+          content: ./_commit_messages.txt
+          contentIsFilePath: true
+          regex: "### Automatically added description ###\n.*"
+          token: ${{ github.token }}        
