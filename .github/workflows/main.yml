@@ -23,7 +23,7 @@ jobs:
           -H "X-GitHub-Api-Version: 2022-11-28" \
           "${{ github.event.pull_request.commits_url }}" \
           | jq -r '.[] | "[\(.sha)](\(.html_url)) \(.commit.message)"')
-          echo "### Automatically added description ###" > ./_commit_messages.txt
+          echo "\n### Automatically added description ###" > ./_commit_messages.txt
           echo "${COMMITS}" >> ./_commit_messages.txt
           
       - name: Update PR Description
