@@ -1,0 +1,21 @@
+---
+
+name: Collect Commit Messages
+
+on: pull_request
+permissions:
+  pull-requests: read
+
+jobs:
+  get-commit-messages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Get commits
+        id: get-commits
+        run: |
+          echo "${{ github.event.pull_request.commits }}"
+        
