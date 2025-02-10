@@ -23,15 +23,16 @@ jobs:
           -H "X-GitHub-Api-Version: 2022-11-28" \
           "${{ github.event.pull_request.commits_url }}" \
           | jq -r '.[] | "[\(.sha)](\(.html_url)) \(.commit.message)"')
-          echo "" > ./_commit_messages.txt
+          echo "<!-- start match -->" > ./_commit_messages.txt
           echo "### Automatically added description" >> ./_commit_messages.txt
           echo "${COMMITS}" >> ./_commit_messages.txt
+          echo "<!-- end match -->"
           
       - name: Update PR Description
         uses: nefrob/pr-description@v1.2.0
         with:
           content: ./_commit_messages.txt
           contentIsFilePath: true
-          regex: "### Automatically added description\n.*"
+          regex: "<!-- start match -->.*?<!-- end match -->"
           regexFlags: ims
           token: ${{ github.token }}        
