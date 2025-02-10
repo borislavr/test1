@@ -24,8 +24,8 @@ jobs:
           "${{ github.event.pull_request.commits_url }}" \
           | jq -r '.[] | "[\(.sha)](\(.html_url)) \(.commit.message)"')
           echo "${COMMITS}"
-          echo "commits_messages=${COMMITS}" >> GITHUB_ENV
+          echo "commit_messages=${COMMITS}" >> GITHUB_OUTPUT
       - name: Print
         run: |
-          echo "${{ env.commits_messages }}"
+          echo "${{ steps.get-commits.outputs.commits_messages }}"
         
