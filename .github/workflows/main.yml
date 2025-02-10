@@ -26,7 +26,7 @@ jobs:
           echo "<!-- start match -->" > ./_commit_messages.txt
           echo "### Automatically added description" >> ./_commit_messages.txt
           echo "${COMMITS}" >> ./_commit_messages.txt
-          echo "<!-- end match -->"
+          echo "<!-- end match -->" >> ./_commit_messages.txt
           
       - name: Update PR Description
         uses: nefrob/pr-description@v1.2.0
