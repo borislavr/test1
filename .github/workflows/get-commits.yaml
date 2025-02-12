@@ -1,37 +1,70 @@
-name: Get Commit Messages and URLs
+name: Add Commit Comments to PR Description
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, synchronize]
 
 jobs:
-  get-commits:
+  add-comments-to-pr:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Get commit messages and URLs
-      id: get-commits
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const prNumber = context.payload.pull_request.number;
-          const commits = await github.rest.pulls.listCommits({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            pull_number: prNumber
-          });
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
 
-          const commitMessagesAndUrls = commits.data.map(commit => ({
-            message: commit.commit.message,
-            url: commit.html_url
-          }));
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
 
-          core.setOutput("result", JSON.stringify(commitMessagesAndUrls));
+      - name: Get commit comments and update PR description
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          import os
+          import requests
 
-    - name: Output commit messages and URLs
-      run: |
-        echo "Commit messages and URLs:"
-        echo "${{ steps.get-commits.outputs.result }}"
+          # GitHub API URL
+          repo = os.getenv('GITHUB_REPOSITORY')
+          pr_number = os.getenv('GITHUB_REF').split('/')[-2]
+          api_url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
+
+          # Get PR details
+          headers = {
+              "Authorization": f"Bearer {os.getenv('GITHUB_TOKEN')}",
+              "Accept": "application/vnd.github.v3+json"
+          }
+          pr_response = requests.get(api_url, headers=headers)
+          pr_data = pr_response.json()
+
+          # Get commits in the PR
+          commits_url = pr_data['commits_url']
+          commits_response = requests.get(commits_url, headers=headers)
+          commits_data = commits_response.json()
+
+          # Collect comments from all commits
+          comments = []
+          for commit in commits_data:
+              commit_sha = commit['sha']
+              commit_comments_url = f"https://api.github.com/repos/{repo}/commits/{commit_sha}/comments"
+              commit_comments_response = requests.get(commit_comments_url, headers=headers)
+              commit_comments_data = commit_comments_response.json()
+              for comment in commit_comments_data:
+                  comments.append(f"Commit {commit_sha}: {comment['body']}")
+
+          # Update PR description with comments
+          if comments:
+              new_description = pr_data['body'] + "\n\n### Commit Comments:\n" + "\n".join(comments)
+              update_pr_url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
+              update_data = {
+                  "body": new_description
+              }
+              update_response = requests.patch(update_pr_url, json=update_data, headers=headers)
+              print("PR description updated with commit comments.")
+          else:
+              print("No commit comments found.")
