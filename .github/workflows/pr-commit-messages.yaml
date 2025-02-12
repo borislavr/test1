@@ -12,4 +12,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Update PR body"
-        uses: borislavr/actions/pr-add-messages@main
+        uses: borislavr/test1/actions/pr-add-messages@main
