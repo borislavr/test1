@@ -30,32 +30,26 @@ jobs:
         run: |
           import os
           import requests
+          import re
 
           # GitHub API URL
           repo = os.getenv('GITHUB_REPOSITORY')
-          print(repo)
           pr_number = os.getenv('GITHUB_REF').split('/')[-2]
-          print(pr_number)
           api_url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
-          print(api_url)
 
           # Get PR details
           headers = {
               "Authorization": f"Bearer {os.getenv('GITHUB_TOKEN')}",
               "Accept": "application/vnd.github.v3+json"
           }
-          print(headers)
           pr_response = requests.get(api_url, headers=headers)
           pr_data = pr_response.json()
-          print(pr_data)
-          print(pr_data['body'])
+          pr_body = pr_data['body']
 
           # Get commits in the PR
           commits_url = pr_data['commits_url']
-          print(commits_url)
           commits_response = requests.get(commits_url, headers=headers)
           commits_data = commits_response.json()
-          print(commits_data)
 
           # Collect messages from all commits
           messages = []
@@ -64,12 +58,17 @@ jobs:
 
           # Update PR description with messages
           if messages:
-              new_description = pr_data['body'] + "\n\n### Commit messages:\n" + "\n".join(messages)
+              messages_body = "\n### Commit messages:\n" + "\n".join(messages) + "\n"
+              new_description = re.sub('<!-- start messages -->.*?<!-- end messages -->', messages_body, pr_body, flags=re.DOTALL)
+              # if it is the first time body update
+              if new_description == pr_body:
+                  new_description = pr_body + "\n<!-- start messages -->\n### Commit messages:\n" + "\n".join(messages) + "\n<!-- end messages -->"
+                  
               update_pr_url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
               update_data = {
                   "body": new_description
               }
               update_response = requests.patch(update_pr_url, json=update_data, headers=headers)
-              print("PR description updated with commit comments.")
+              print("PR description updated with commit messages.")
           else:
-              print("No commit comments found.")
+              print("No commit messages found.")
