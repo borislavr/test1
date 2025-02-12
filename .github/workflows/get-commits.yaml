@@ -23,6 +23,7 @@ jobs:
           pip install requests
 
       - name: Get commit comments and update PR description
+        shell: python
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
