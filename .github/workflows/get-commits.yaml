@@ -48,25 +48,23 @@ jobs:
           pr_response = requests.get(api_url, headers=headers)
           pr_data = pr_response.json()
           print(pr_data)
+          print(pr_data['body'])
 
           # Get commits in the PR
           commits_url = pr_data['commits_url']
+          print(commits_url)
           commits_response = requests.get(commits_url, headers=headers)
           commits_data = commits_response.json()
+          print(commits_data)
 
-          # Collect comments from all commits
-          comments = []
+          # Collect messages from all commits
+          messages = []
           for commit in commits_data:
-              commit_sha = commit['sha']
-              commit_comments_url = f"https://api.github.com/repos/{repo}/commits/{commit_sha}/comments"
-              commit_comments_response = requests.get(commit_comments_url, headers=headers)
-              commit_comments_data = commit_comments_response.json()
-              for comment in commit_comments_data:
-                  comments.append(f"Commit {commit_sha}: {comment['body']}")
+              messages.append(f"[{commit['author]['login']}({commit['html_url']}) {commit['message']}")
 
-          # Update PR description with comments
-          if comments:
-              new_description = pr_data['body'] + "\n\n### Commit Comments:\n" + "\n".join(comments)
+          # Update PR description with messages
+          if messages:
+              new_description = pr_data['body'] + "\n\n### Commit messages:\n" + "\n".join(messages)
               update_pr_url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
               update_data = {
                   "body": new_description
