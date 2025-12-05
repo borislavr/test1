@@ -1,0 +1,10 @@
+name: One
+on: workflow_dispatch
+
+jobs:
+  one:
+    runs-on: ubuntu-latest
+    steps:
+      - name: One
+        run: echo "One"
+        shell: bash
