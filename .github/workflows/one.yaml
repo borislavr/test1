@@ -1,5 +1,5 @@
 name: One
-on: workflow_dispatch
+on: push
 
 jobs:
   one:
