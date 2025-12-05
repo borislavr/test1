@@ -6,5 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: One
-        run: echo "One"
+        run: |
+          echo "One"
+          exit 1
         shell: bash
