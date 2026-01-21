@@ -59,3 +59,11 @@ jobs:
           publish-charts: 'true'
         env:
           super_linter_version: slim-v8.3.2
+      - name: Getting published chart
+        run: |
+          helm pull oci://ghcr.io/${{ github.repository }}/test-chart:2.0.0
+      - name: Upload chart as an artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-chart
+          path: test-chart-2.0.0.tgz
