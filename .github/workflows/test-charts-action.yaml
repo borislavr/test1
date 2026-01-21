@@ -62,7 +62,7 @@ jobs:
         with:
           ref: ${{ github.event.inputs.action-branch || github.event.ref }}
           path: qubership-workflow-hub
-          repository: qubership-workflow-hub
+          repository: netcracker/qubership-workflow-hub
 
       - name: Run charts-values-update-action
         uses: ./qubership-workflow-hub/actions/charts-values-update-action
