@@ -10,8 +10,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # kind-action ожидает в `config` путь к файлу, а не инлайн YAML,
-      # поэтому сначала пишем конфиг на диск.
+      # пишем конфиг на диск.
       - name: Write kind config
         run: |
           cat > kind-config.yaml <<'EOF'
