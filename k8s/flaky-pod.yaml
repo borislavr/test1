@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: flaky-app
+  labels:
+    app: flaky-app
+spec:
+  restartPolicy: Always
+  volumes:
+    - name: data
+      emptyDir: {}
+  containers:
+    - name: flaky-app
+      image: python:3.12-alpine
+      command: ["sh", "-c"]
+      args:
+        - |
+          COUNT_FILE=/data/count
+          COUNT=$(cat "$COUNT_FILE" 2>/dev/null || echo 0)
+          COUNT=$((COUNT + 1))
+          echo "$COUNT" > "$COUNT_FILE"
+          echo "=== Попытка запуска #$COUNT ==="
+          if [ "$COUNT" -lt 4 ]; then
+            echo "Специально съедаем память (попытка $COUNT из 3) - ожидаем OOMKill"
+            python3 -c "import time; a = bytearray(150 * 1024 * 1024); time.sleep(30)"
+          else
+            echo "Попытка $COUNT: ведём себя нормально, остаёмся живы"
+            sleep 3600
+          fi
+      volumeMounts:
+        - name: data
+          mountPath: /data
+      resources:
+        requests:
+          memory: "32Mi"
+          cpu: "50m"
+        limits:
+          memory: "64Mi"
+          cpu: "200m"

@@ -1,0 +1,80 @@
+name: kind-log-capture-demo
+
+on:
+  workflow_dispatch:
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Поднимаем kind-кластер. Через kubeadmConfigPatches увеличиваем лимиты
+      # ротации логов kubelet, чтобы на диске ноды сохранилось больше попыток
+      # перезапуска, чем дефолтные ~5 файлов по 10Mi.
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: log-demo
+          config: |
+            kind: Cluster
+            apiVersion: kind.x-k8s.io/v1alpha4
+            nodes:
+              - role: control-plane
+                kubeadmConfigPatches:
+                  - |
+                    kind: KubeletConfiguration
+                    containerLogMaxFiles: 20
+                    containerLogMaxSize: "20Mi"
+
+      # "Флапающий" под: первые 3 попытки нарочно съедает память и получает
+      # OOMKill, на 4-й попытке ведёт себя нормально и остаётся Running.
+      # Это имитирует ситуацию "контейнер убивают несколько раз, потом взлетает".
+      - name: Deploy flaky pod
+        run: kubectl apply -f k8s/flaky-pod.yaml
+
+      # Способ №1 - "на лету". Пока под перезапускается, при каждом росте
+      # restartCount сразу забираем kubectl logs --previous: это быстро,
+      # не требует ничего экспортировать, но хранит только последний
+      # предыдущий инстанс - поэтому ловим его сразу, до следующего киллa.
+      - name: Watch restarts and capture --previous logs on the fly
+        run: |
+          mkdir -p artifacts/previous-logs
+          LAST_COUNT=0
+          for i in $(seq 1 60); do
+            PHASE=$(kubectl get pod flaky-app -o jsonpath='{.status.phase}' 2>/dev/null || echo "Pending")
+            COUNT=$(kubectl get pod flaky-app -o jsonpath='{.status.containerStatuses[0].restartCount}' 2>/dev/null || echo 0)
+            echo "check #$i: phase=$PHASE restartCount=$COUNT"
+
+            if [ "$COUNT" -gt "$LAST_COUNT" ]; then
+              echo "  -> обнаружен рестарт ($LAST_COUNT -> $COUNT), сохраняем --previous лог"
+              kubectl logs flaky-app --previous > "artifacts/previous-logs/attempt-${COUNT}.log" 2>&1 || true
+              LAST_COUNT="$COUNT"
+            fi
+
+            if [ "$PHASE" = "Running" ] && [ "$COUNT" -ge 3 ]; then
+              echo "Под стабилизировался после $COUNT рестартов"
+              break
+            fi
+            sleep 5
+          done
+
+          kubectl describe pod flaky-app > artifacts/describe-flaky-app.txt
+          kubectl get events --sort-by=.lastTimestamp > artifacts/events.txt
+
+      # Способ №2 - "подстраховка". Полная выгрузка логов со всех нод
+      # кластера: containerd на ноде хранит ротированные файлы (0.log,
+      # 1.log, 2.log...) по каждой попытке контейнера, а не только
+      # последнюю. Работает, даже если способ №1 что-то не успел поймать.
+      - name: Export full kind node logs
+        if: always()
+        run: kind export logs ./artifacts/kind-logs --name log-demo
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kind-log-capture-demo
+          path: artifacts
+          retention-days: 7
