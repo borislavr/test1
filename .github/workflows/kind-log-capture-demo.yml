@@ -10,6 +10,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # kind-action ожидает в `config` путь к файлу, а не инлайн YAML,
+      # поэтому сначала пишем конфиг на диск.
+      - name: Write kind config
+        run: |
+          cat > kind-config.yaml <<'EOF'
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          nodes:
+            - role: control-plane
+              kubeadmConfigPatches:
+                - |
+                  kind: KubeletConfiguration
+                  containerLogMaxFiles: 20
+                  containerLogMaxSize: "20Mi"
+          EOF
+
       # Поднимаем kind-кластер. Через kubeadmConfigPatches увеличиваем лимиты
       # ротации логов kubelet, чтобы на диске ноды сохранилось больше попыток
       # перезапуска, чем дефолтные ~5 файлов по 10Mi.
@@ -17,16 +33,7 @@ jobs:
         uses: helm/kind-action@v1
         with:
           cluster_name: log-demo
-          config: |
-            kind: Cluster
-            apiVersion: kind.x-k8s.io/v1alpha4
-            nodes:
-              - role: control-plane
-                kubeadmConfigPatches:
-                  - |
-                    kind: KubeletConfiguration
-                    containerLogMaxFiles: 20
-                    containerLogMaxSize: "20Mi"
+          config: kind-config.yaml
 
       # "Флапающий" под: первые 3 попытки нарочно съедает память и получает
       # OOMKill, на 4-й попытке ведёт себя нормально и остаётся Running.
